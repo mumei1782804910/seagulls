@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#7ed6f0">
+<title>Seagull Hunt 🐦</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+  body {
+    font-family: "Trebuchet MS", "Comic Sans MS", -apple-system, sans-serif;
+    background: linear-gradient(to bottom, #8fdcf5 0%, #b8ecfa 34%, #6cc9e8 42%, #8ad9ee 48%, #f7e3b0 55%, #f2d491 100%);
+    display: flex; flex-direction: column; align-items: center;
+    user-select: none; -webkit-user-select: none;
+    position: relative;
+  }
+
+  /* ---- beach scenery ---- */
+  .sun {
+    position: absolute; top: 3%; right: 8%; width: 64px; height: 64px;
+    background: radial-gradient(circle, #ffe27a 55%, #ffd54f 70%, transparent 72%);
+    border-radius: 50%; box-shadow: 0 0 40px 15px rgba(255,220,100,.55);
+    animation: sunPulse 4s ease-in-out infinite;
+    pointer-events: none; z-index: 0;
+  }
+  @keyframes sunPulse { 50% { box-shadow: 0 0 55px 22px rgba(255,220,100,.7); } }
+  .cloud {
+    position: absolute; background: #fff; border-radius: 50px;
+    opacity: .9; pointer-events: none; z-index: 0;
+    animation: drift linear infinite;
+  }
+  .cloud::before, .cloud::after {
+    content: ""; position: absolute; background: #fff; border-radius: 50%;
+  }
+  .c1 { top: 6%; left: -80px; width: 70px; height: 24px; animation-duration: 55s; }
+  .c1::before { width: 30px; height: 30px; top: -14px; left: 12px; }
+  .c1::after  { width: 22px; height: 22px; top: -10px; left: 36px; }
+  .c2 { top: 14%; left: -120px; width: 90px; height: 28px; animation-duration: 75s; animation-delay: -30s; }
+  .c2::before { width: 38px; height: 38px; top: -18px; left: 16px; }
+  .c2::after  { width: 26px; height: 26px; top: -12px; left: 48px; }
+  @keyframes drift { from { transform: translateX(0); } to { transform: translateX(120vw); } }
+  .waves {
+    position: absolute; top: 40%; left: 0; width: 100%; height: 60px;
+    pointer-events: none; z-index: 0; opacity: .6;
+  }
+
+  /* ---- header / HUD ---- */
+  header {
+    width: 100%; max-width: 480px; padding: 10px 14px 6px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    z-index: 2;
+  }
+  .hud-pill {
+    background: rgba(255,255,255,.85); border-radius: 999px;
+    padding: 6px 14px; font-weight: bold; font-size: 17px; color: #2a6b85;
+    box-shadow: 0 2px 6px rgba(0,0,0,.12);
+    white-space: nowrap;
+  }
+  #flipsWrap {
+    flex: 1; height: 18px; background: rgba(255,255,255,.7);
+    border-radius: 999px; overflow: hidden; box-shadow: inset 0 1px 4px rgba(0,0,0,.15);
+  }
+  #flipsBar {
+    height: 100%; width: 100%;
+    background: linear-gradient(to right, #ffb74d, #ff8a65);
+    border-radius: 999px; transition: width .3s ease;
+  }
+  #flipsBar.low { background: linear-gradient(to right, #ff7043, #e53935); animation: blink .5s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: .55; } }
+
+  h1.title {
+    z-index: 2; color: #fff; font-size: 22px; letter-spacing: 1px;
+    text-shadow: 0 2px 0 rgba(42,107,133,.5); margin-top: 2px;
+  }
+
+  /* ---- grid ---- */
+  #gridWrap { z-index: 2; padding: 10px; margin-top: 6px; }
+  #grid {
+    display: grid; gap: 6px;
+    background: rgba(255,255,255,.25);
+    padding: 10px; border-radius: 20px;
+    box-shadow: 0 6px 18px rgba(90,60,20,.18);
+  }
+  .cell {
+    width: var(--cell); height: var(--cell);
+    background: linear-gradient(145deg, #9c7647, #7d5c33);
+    border-radius: 14px;
+    box-shadow: inset 0 -3px 0 rgba(45,30,12,.4), 0 2px 4px rgba(0,0,0,.15);
+    position: relative; overflow: visible;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    transition: transform .1s;
+  }
+  .cell:active { transform: scale(.93); }
+  .cell.found {
+    background: linear-gradient(145deg, #c8f3d0, #9fe6ae);
+    box-shadow: inset 0 -3px 0 rgba(60,140,80,.3), 0 2px 4px rgba(0,0,0,.08);
+    cursor: default;
+  }
+  .cell .layer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .cell svg { width: 82%; height: 82%; }
+  .cell .foot-layer svg { width: 64%; height: 64%; }
+  .gull-img { width: 88%; height: 88%; object-fit: contain; filter: drop-shadow(0 3px 2px rgba(0,0,0,.18)); }
+  .gull-sad { filter: grayscale(.55) opacity(.8) drop-shadow(0 3px 2px rgba(0,0,0,.18)); }
+
+  .gull-pop { animation: gullPop .5s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes gullPop {
+    0% { transform: scale(0) rotate(-20deg); }
+    60% { transform: scale(1.25) rotate(8deg); }
+    100% { transform: scale(1) rotate(0); }
+  }
+  .foot-reveal { animation: footReveal .45s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes footReveal {
+    0% { transform: scale(.3); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  .cell.flipped {
+    background:
+      radial-gradient(circle at 22% 30%, rgba(170,130,70,.4) 1.3px, transparent 2.4px),
+      radial-gradient(circle at 68% 22%, rgba(150,110,55,.35) 1.1px, transparent 2.2px),
+      radial-gradient(circle at 42% 64%, rgba(170,130,70,.38) 1.4px, transparent 2.5px),
+      radial-gradient(circle at 82% 72%, rgba(150,110,55,.32) 1px, transparent 2px),
+      radial-gradient(circle at 12% 82%, rgba(255,255,255,.5) 1px, transparent 2px),
+      radial-gradient(circle at 58% 42%, rgba(255,255,255,.45) 1.1px, transparent 2.1px),
+      linear-gradient(145deg, #fbeec6, #f0d89e);
+    background-size: 26px 26px, 22px 22px, 30px 30px, 24px 24px, 28px 28px, 20px 20px, 100% 100%;
+    box-shadow: inset 0 2px 4px rgba(120,85,40,.3), 0 2px 4px rgba(0,0,0,.08);
+    animation: sandReveal .3s ease;
+  }
+  @keyframes sandReveal {
+    0% { transform: scale(.9); }
+    60% { transform: scale(1.04); }
+    100% { transform: scale(1); }
+  }
+  .cell.shake { animation: shake .3s; }
+  @keyframes shake {
+    25% { transform: translateX(-4px); }
+    50% { transform: translateX(4px); }
+    75% { transform: translateX(-2px); }
+  }
+
+  /* floating feedback text */
+  .float-text {
+    position: absolute; left: 50%; top: -6px; transform: translateX(-50%);
+    font-size: 13px; font-weight: bold; color: #fff;
+    text-shadow: 0 1px 3px rgba(0,0,0,.4);
+    pointer-events: none; white-space: nowrap; z-index: 5;
+    animation: floatUp 1s ease forwards;
+  }
+  @keyframes floatUp {
+    from { opacity: 1; transform: translate(-50%, 0); }
+    to   { opacity: 0; transform: translate(-50%, -26px); }
+  }
+
+  /* ---- overlays ---- */
+  .overlay {
+    position: fixed; inset: 0; z-index: 10;
+    background: rgba(40,90,120,.55); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .overlay.hidden { display: none; }
+  .card {
+    background: linear-gradient(to bottom, #fffdf5, #fff3d6);
+    border-radius: 24px; padding: 26px 24px; max-width: 340px; width: 100%;
+    text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,.3);
+    animation: cardIn .4s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes cardIn { from { transform: scale(.7); opacity: 0; } }
+  .card h2 { color: #2a6b85; font-size: 26px; margin-bottom: 10px; }
+  .card p { color: #5a7a8a; font-size: 15px; line-height: 1.5; margin-bottom: 8px; }
+  .card .big-gull svg { width: 110px; height: 110px; }
+  .card .big-gull img { width: 110px; height: 110px; object-fit: contain; }
+  .card .rules {
+    text-align: left; background: rgba(126,214,240,.15);
+    border-radius: 14px; padding: 10px 14px; margin: 10px 0 14px;
+  }
+  .card .rules p { margin: 5px 0; font-size: 14px; }
+  .btn {
+    background: linear-gradient(to bottom, #ffb74d, #ff9800);
+    border: none; border-radius: 999px; padding: 13px 34px;
+    font-size: 19px; font-weight: bold; color: #fff; font-family: inherit;
+    box-shadow: 0 4px 0 #e65100, 0 6px 12px rgba(0,0,0,.2);
+    cursor: pointer; transition: transform .1s;
+  }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #e65100; }
+  .stat-line { font-size: 18px !important; color: #2a6b85 !important; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div class="sun"></div>
+<div class="cloud c1"></div>
+<div class="cloud c2"></div>
+<svg class="waves" viewBox="0 0 400 40" preserveAspectRatio="none">
+  <path d="M0 20 Q 25 5 50 20 T 100 20 T 150 20 T 200 20 T 250 20 T 300 20 T 350 20 T 400 20 V40 H0 Z" fill="#5fc0e0">
+    <animate attributeName="d" dur="3s" repeatCount="indefinite"
+      values="M0 20 Q 25 5 50 20 T 100 20 T 150 20 T 200 20 T 250 20 T 300 20 T 350 20 T 400 20 V40 H0 Z;
+              M0 20 Q 25 35 50 20 T 100 20 T 150 20 T 200 20 T 250 20 T 300 20 T 350 20 T 400 20 V40 H0 Z;
+              M0 20 Q 25 5 50 20 T 100 20 T 150 20 T 200 20 T 250 20 T 300 20 T 350 20 T 400 20 V40 H0 Z"/>
+  </path>
+</svg>
+
+<header>
+  <div class="hud-pill" id="foundPill">🐦 0/5</div>
+  <div id="flipsWrap"><div id="flipsBar"></div></div>
+  <div class="hud-pill" id="flipsPill">🔍 20</div>
+</header>
+<h1 class="title">🏖️ Seagull Hunt</h1>
+
+<div id="gridWrap"><div id="grid"></div></div>
+
+<!-- start overlay -->
+<div class="overlay" id="startOverlay">
+  <div class="card">
+    <div class="big-gull" id="startGull"></div>
+    <h2>Seagull Hunt!</h2>
+    <div class="rules">
+      <p>🐦 <b>5 seagulls</b> are hiding on the beach.</p>
+      <p>👆 You have <b>20 flips</b> to find them all!</p>
+      <p>👣 Seagulls walk around and <b>leave footprints behind</b> — flip a tile to uncover them.</p>
+      <p>🎯 A found seagull stays put. Run out of flips and the rest escape!</p>
+    </div>
+    <button class="btn" id="startBtn">Play! 🎮</button>
+  </div>
+</div>
+
+<!-- end overlay -->
+<div class="overlay hidden" id="endOverlay">
+  <div class="card">
+    <div class="big-gull" id="endGull"></div>
+    <h2 id="endTitle">You Win!</h2>
+    <p id="endMsg"></p>
+    <p class="stat-line" id="endStats"></p>
+    <button class="btn" id="againBtn">Play Again 🔁</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  // ---------- config ----------
+  const SIZE = 6;            // grid is SIZE x SIZE
+  const NUM_GULLS = 5;       // seagulls to find
+  const MAX_FLIPS = 20;      // tile flips before the gulls escape
+  const MOVE_CHANCE = 0.3;   // chance each gull walks after every flip
+
+  // ---------- cute art ----------
+  function gullImg(happy) {
+    return `<img src="seagull.png" alt="seagull" class="gull-img${happy ? '' : ' gull-sad'}" draggable="false">`;
+  }
+
+  function footSVG() {
+    return `
+    <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <g fill="#f0a24a" stroke="#d9822b" stroke-width="4" stroke-linejoin="round" opacity=".9">
+        <g transform="translate(35,34) rotate(-18)">
+          <path d="M0 -14 L -13 8 Q 0 16 13 8 Z"/>
+          <path d="M0 -10 L 0 10" fill="none" stroke-linecap="round"/>
+        </g>
+        <g transform="translate(63,64) rotate(-18)">
+          <path d="M0 -14 L -13 8 Q 0 16 13 8 Z"/>
+          <path d="M0 -10 L 0 10" fill="none" stroke-linecap="round"/>
+        </g>
+      </g>
+    </svg>`;
+  }
+
+  // ---------- state ----------
+  const grid = document.getElementById('grid');
+  const flipsBar = document.getElementById('flipsBar');
+  const flipsPill = document.getElementById('flipsPill');
+  const foundPill = document.getElementById('foundPill');
+  const startOverlay = document.getElementById('startOverlay');
+  const endOverlay = document.getElementById('endOverlay');
+
+  document.getElementById('startGull').innerHTML = gullImg(true);
+
+  let gulls = [];             // {r, c, found}
+  let cells = [];             // 2D array of cell elements
+  let footprints = new Set(); // "r,c" tiles a gull walked off (hidden until flipped)
+  let flipsLeft, playing = false;
+
+  function cellSizeSetup() {
+    const w = Math.min(window.innerWidth, 480) - 20 - 20 - (SIZE - 1) * 6;
+    const h = window.innerHeight - 190 - 20 - (SIZE - 1) * 6;
+    const size = Math.floor(Math.min(w / SIZE, h / SIZE, 64));
+    document.documentElement.style.setProperty('--cell', size + 'px');
+  }
+  cellSizeSetup();
+  window.addEventListener('resize', cellSizeSetup);
+
+  function buildGrid() {
+    grid.innerHTML = '';
+    grid.style.gridTemplateColumns = `repeat(${SIZE}, var(--cell))`;
+    cells = [];
+    for (let r = 0; r < SIZE; r++) {
+      cells[r] = [];
+      for (let c = 0; c < SIZE; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        cell.innerHTML = '<div class="layer foot-layer"></div><div class="layer gull-layer"></div>';
+        cell.addEventListener('pointerdown', () => tapCell(r, c));
+        grid.appendChild(cell);
+        cells[r][c] = cell;
+      }
+    }
+  }
+
+  function placeGulls() {
+    gulls = [];
+    const spots = new Set();
+    while (spots.size < NUM_GULLS) {
+      spots.add(Math.floor(Math.random() * SIZE * SIZE));
+    }
+    for (const s of spots) {
+      gulls.push({ r: Math.floor(s / SIZE), c: s % SIZE, found: false });
+    }
+  }
+
+  function gullAt(r, c) {
+    return gulls.find(g => g.r === r && g.c === c);
+  }
+
+  function foundCount() {
+    return gulls.filter(g => g.found).length;
+  }
+
+  function updateHUD() {
+    foundPill.textContent = `🐦 ${foundCount()}/${NUM_GULLS}`;
+    flipsPill.textContent = `🔍 ${flipsLeft}`;
+    flipsBar.style.width = (flipsLeft / MAX_FLIPS * 100) + '%';
+    flipsBar.classList.toggle('low', flipsLeft <= 5);
+  }
+
+  function floatText(cell, text) {
+    const el = document.createElement('div');
+    el.className = 'float-text';
+    el.textContent = text;
+    cell.appendChild(el);
+    setTimeout(() => el.remove(), 1000);
+  }
+
+  function tapCell(r, c) {
+    if (!playing) return;
+    const cell = cells[r][c];
+    if (cell.classList.contains('found')) return;
+    flipsLeft--;
+    const g = gullAt(r, c);
+    if (g && !g.found) {
+      g.found = true;                       // found gulls never move again
+      cell.classList.add('found');
+      cell.classList.remove('flipped');
+      const layer = cell.querySelector('.gull-layer');
+      layer.innerHTML = gullImg(true);
+      layer.firstElementChild.classList.add('gull-pop');
+      cell.querySelector('.foot-layer').innerHTML = '';
+      floatText(cell, ['Gotcha! 🎉', 'Found! ✨', 'Squawk! 🐦'][Math.floor(Math.random() * 3)]);
+      if (navigator.vibrate) navigator.vibrate(40);
+    } else {
+      cell.classList.add('flipped');
+      cell.classList.remove('shake'); void cell.offsetWidth;
+      cell.classList.add('shake');
+      const foot = cell.querySelector('.foot-layer');
+      if (footprints.has(r + ',' + c)) {
+        // a gull walked here — reveal its footprints
+        foot.innerHTML = footSVG();
+        foot.firstElementChild.classList.add('foot-reveal');
+        floatText(cell, 'Footprints! 👣');
+      } else {
+        foot.innerHTML = ''; // plain sand — nothing has walked here
+      }
+    }
+    updateHUD();
+    if (foundCount() === NUM_GULLS) { endGame(true); return; }
+    if (flipsLeft <= 0) { endGame(false); return; }
+    moveGulls(); // the hunt goes on — gulls may wander after each flip
+  }
+
+  function moveGulls() {
+    for (const g of gulls) {
+      if (g.found) continue;
+      if (Math.random() > MOVE_CHANCE) continue;
+      const options = [[0,1],[0,-1],[1,0],[-1,0]]
+        .map(([dr, dc]) => [g.r + dr, g.c + dc])
+        .filter(([nr, nc]) =>
+          nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && !gullAt(nr, nc));
+      if (!options.length) continue;
+      const [nr, nc] = options[Math.floor(Math.random() * options.length)];
+      footprints.add(g.r + ',' + g.c); // hidden until the player flips that tile
+      g.r = nr; g.c = nc;
+    }
+  }
+
+  function startGame() {
+    buildGrid();
+    placeGulls();
+    footprints = new Set();
+    flipsLeft = MAX_FLIPS;
+    playing = true;
+    updateHUD();
+    startOverlay.classList.add('hidden');
+    endOverlay.classList.add('hidden');
+  }
+
+  function endGame(won) {
+    playing = false;
+    // reveal the ones that got away
+    for (const g of gulls) {
+      if (!g.found) {
+        const layer = cells[g.r][g.c].querySelector('.gull-layer');
+        layer.innerHTML = gullImg(false);
+        layer.style.opacity = '.75';
+      }
+    }
+    document.getElementById('endGull').innerHTML = gullImg(won);
+    document.getElementById('endTitle').textContent = won ? '🎉 You Win!' : '🔍 Out of Flips!';
+    document.getElementById('endMsg').textContent = won
+      ? 'You found every single seagull! The beach is yours!'
+      : `The sneaky seagulls got away this time...`;
+    document.getElementById('endStats').textContent = won
+      ? `⭐ Score: ${flipsLeft * 50 + NUM_GULLS * 100} (${flipsLeft} flips to spare!)`
+      : `🐦 Found ${foundCount()} of ${NUM_GULLS} seagulls`;
+    setTimeout(() => endOverlay.classList.remove('hidden'), won ? 600 : 1200);
+  }
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+  document.getElementById('againBtn').addEventListener('click', startGame);
+
+  buildGrid(); // show empty beach behind the start card
+})();
+</script>
+</body>
+</html>
