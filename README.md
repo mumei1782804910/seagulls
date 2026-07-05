@@ -1,17 +1,20 @@
 # 🏖️ Seagull Hunt
 
 A cute, mobile-friendly beach game. Five seagulls are hiding on a sandy grid —
-you have 20 tile flips to find them all! The seagulls walk around between your
-flips, leaving hidden footprints behind. Footprints only show up when you flip
-the tile they're on, so use them to track the birds down.
+you have 25 tile flips to find them all! Before hiding, each seagull walked
+1–3 tiles in a straight line (horizontal or vertical), leaving a hidden
+footprint trail. Footprints only show up when you flip the tile they're on,
+so use them to deduce where each bird is hiding.
 
 ## How to play
 
 - 👆 Flip a sand tile to check for a seagull. Every flip counts!
-- 👣 Footprints mean a seagull walked off that tile — it's somewhere nearby.
-- 🏖️ Plain sand means nothing has been there (so far...).
-- 🎯 A found seagull stays put and stops walking.
-- 🔍 Find all 5 seagulls before your 20 flips run out, or they escape.
+- 👣 A footprint means a seagull walked across that tile — and it points in
+  the direction the bird went.
+- 📏 Trails are straight lines of 1–3 footprints, and the seagull sits on the
+  tile right at the end of its trail.
+- 🏖️ Plain sand means no seagull ever walked there.
+- 🔍 Find all 5 seagulls before your 25 flips run out, or they escape.
 
 ## Play locally
 
